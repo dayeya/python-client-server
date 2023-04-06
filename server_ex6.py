@@ -32,7 +32,7 @@ conf.sniff_promisc = 0
 PATH = os.path.dirname(os.path.realpath(__file__))
 FILE_REG = r'^/(?:create|run|edit)\s+(\w+\.py)$'
 KICKED, FILES = [], []
-INACTIVE_GAP = 180
+INACTIVE_GAP = 120
 BUFSIZE = 1024
 SIGNET = 'I AM LOOKING FOR A SERVER'
 SIGNET_LEN = len(SIGNET)
@@ -40,6 +40,13 @@ FILTER_REG = r'[^\w\n|.]'
 IP_REG = r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=\s|\Z)'
      
 def init_gui():
+     
+    '''
+    :init_gui, initializes the gui.
+    :server side -> Has a TreeView Widget.
+    :RETURNS: every widget on the WINDOW.
+    '''
+     
     WINDOW = tk.Tk()
     WINDOW.title("Server / Admin - Daniel Sapojnikov")
 
@@ -134,8 +141,12 @@ def init_gui():
 
     return WINDOW, table
 
-def generate_password():
+def generate_password() -> str:
     
+    '''
+    :Generates a random password using random + string modules.
+    :RETURNS -> a string.
+    '''
     # makes it more random.
     PASS_LEN = random.randint(5, 8)
     
@@ -155,6 +166,11 @@ def generate_password():
 
 def create_db() -> None:
     
+    '''
+    :Creates a data base of all clients, a must addition to the admin page.
+    :RETURNS -> the cursor for later means. 
+    '''
+
     # connecting to the data base.
     data_base_file = 'admin.db'
     table = sl.connect(data_base_file)
@@ -184,6 +200,11 @@ def create_db() -> None:
 
 def insert_client(c, name, addr, password) -> None:
     
+    '''
+    :Gets: cursor, name, addrs = (IP, PORT), password
+    :inserts the client to the data base.
+    '''
+
     # insert online clients.
     date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
     table = sl.connect('admin.db')
@@ -196,9 +217,12 @@ def insert_client(c, name, addr, password) -> None:
  
 def visualize_client(table) -> None:
     
+    '''
+    :Get -> the table we want to update.
+    '''
+     
     entry = sl.connect('admin.db')
     c = entry.cursor()
-    
     c.execute('''SELECT COUNT(*) FROM users''')
     num_users = c.fetchone()[0]
     client_data = c.execute(f'''SELECT * FROM users WHERE rowid = {num_users}''').fetchone()
@@ -206,8 +230,6 @@ def visualize_client(table) -> None:
     # Finishing the work.
     c.close()
     entry.close()
-    
-    # update visuals.
     table.insert('', 'end', values=tuple(client_data))
     
 def delete_client():
@@ -260,15 +282,15 @@ def get_addr(d):
     return (ip, port)
  
 def catch_looking_packet(server_ip, server_port) -> None:
-    
-    # We want to catch the 'LOOKING' packet, where the client tells the LAN that he is looking for a server.
-    # When a client is opened he broadcasts the LAN that he is 'LOOKING FOR A SERVER' combined with his credentials.
-    # The server then sniffs that UDP frame, checks the 'LOOKING' label then takes the ip & port of the client.
-    # The server will send the clients its own credentials to the client.
-    
+     
+    '''
+    :We want to catch the 'LOOKING' packet, where the client tells the LAN that he is looking for a server.
+    :When a client is opened he broadcasts the LAN that he is 'LOOKING FOR A SERVER' combined with his credentials.
+    :The server then sniffs that UDP frame, checks the 'LOOKING' label then takes the ip & port of the client.
+    :The server will send the clients its own credentials to the client.
+    '''
     ip, port = server_ip, server_port
     server_udp = socket(family=AF_INET, type=SOCK_DGRAM)
-    #server_udp.bind((ip, port))
     
     # catch the data.
     addr, looking = (), False
@@ -288,6 +310,12 @@ def catch_looking_packet(server_ip, server_port) -> None:
             server_udp.sendto(data, addr)
             
 def notify_all(input_list, terminator, server):
+     
+    '''
+    :Gets => list of clients, terminator & the server socket.
+    :Imulates BROADCAST messages, when the terminator socket sends $TERMINATE, we notify the client about the case.
+    '''
+     
     # notify other clients.
     online_clients = [s for s in input_list if s not in {terminator, server}]
     print(online_clients)
@@ -298,8 +326,8 @@ def notify_all(input_list, terminator, server):
 def verify_termination(input_list, terminator, server, active_dict, PASSWORD):
     
     '''
-    :input_list is the current open sockets list.
-    :PASSWORD -> the current connections password.
+    :Gets -> list of clients, server socket, active_dict, PASSWORD
+    :Verifies the password corresponding to the client, can stop $TERMINATE process by sending Stop terminating.
     '''
     
     global SERVER_SHUT_DOWN
@@ -326,7 +354,7 @@ def verify_termination(input_list, terminator, server, active_dict, PASSWORD):
                     
                 SERVER_SHUT_DOWN = True
 
-            elif data == 'Stop terminating.':
+            elif data == 'Stop terminating':
                 data = 'Stopped! you may continue.'
                 terminator.send(data.encode('utf-8'))
                 SENT = False 
@@ -341,7 +369,14 @@ def verify_termination(input_list, terminator, server, active_dict, PASSWORD):
             break
 
 def kick(input_list, active_dict) -> None:
-    # Kick all the clients that are not communicating for at least 2 minutes.
+    
+    '''
+    :Gets -> list of clients, active_dict which is a dictionary that matches to every KEY its Last ACTIVE time.
+    
+    $$$ IMPORTANT $$$
+    :KICKS every client whos not been active for at least 2 minutes, updates the active_dict accordingly.
+    '''
+
     while True:
         try:
             for client_sock, active_time in {sock: time for sock, time in active_dict.items() if sock not in KICKED}.items():
@@ -378,72 +413,106 @@ def kick(input_list, active_dict) -> None:
             
 def py_code(sock, active_dict):
 
+    '''
+    :The function behind the pycode mode, gets a sock & the active dict.
+    :$pycode, has 6 sub-modes (/finish pycode, /finish coding!, /finish editing!, /create, /edit, /run).
+    :the client can create .py files, edit them and finally run them.
+    :TO create -> /create <file_name>.py E.g /create test.py
+    :To edit -> /edit <file_name>.py as the above -> <line_number> <replacement> E.g 5 print("Hello")
+    :To run -> /run <file_name>.py E.g /run test.py
+    :To finish any process (/finish coding!, /finish editing!) you make write it and send it, the process will be finished.
+    
+    $$$ important comments $$$
+    :DOES NOT SUPPORT INPUTS.
+    :DOES SUPPORT LOOPS, VARIABLES, IF ELSE STATEMENTS, SPECIAL FUNCTIONS SUCH AS eval, print etc.
+    :DOES SUPPORT IMPORT (has to be installed).
+    
+    :An error will be displayed once a client will /run a file, the client will then be able to /edit the file!
+    :ALL OF THE CLIENTS CAN RUN & EDIT all of the files under the same SERVER session.
+    :once a server is closed, all of the files are gone.
+    '''
+
     global SENT
+
     while True:
         try:
-            
-            # recv file name in the format $pycode create <file_name>.py
+            # recv file name in the format /create <file_name>.py & redefine important instances.
             sock.setblocking(True)
             file = sock.recv(BUFSIZE).decode('utf-8')
             active_dict.update({sock: time.time()})
+            
+            # SUB-MODES
+            if not re.search(FILE_REG, file): # check valid commands with regex.
+                sock.send('Enter a valid file name, or command.'.encode('utf-8'))
+                continue
+               
             if file == '/finish pycode':
                 SENT = False 
                 break
-            if not re.search(FILE_REG, file): 
-                sock.send('Enter a valid file name, or command.'.encode('utf-8'))
-                continue
-            
-            # run the file.
+               
             if '/run' in file:
                 file = re.sub('/run', '', file).strip()
-                if file not in FILES: # not valid command.
+                if file not in FILES:
                     sock.send('server: Enter an existing file!'.encode('utf-8'))
                     continue
-                
-                # run the file.
                 else: 
                     try:
                         # all of the files are stored in the same dir as the SERVER file.
                         os.chdir(PATH)
                         output = subprocess.check_output(f'python {file}', stderr=subprocess.STDOUT)
                         sock.send(output)
+                         
+                    # Get file error.     
                     except subprocess.CalledProcessError as e:
                         error_output = e.output.decode('utf-8').strip()
                         sock.send(f'{file} as an Error: {error_output}'.encode('utf-8'))
+                    
                     finally: continue
             
             elif '/edit' in file:
                 file = re.sub('/edit', '', file).strip()
-                if file not in FILES: # not valid command.
+               
+                # validate file.
+                if file not in FILES:
                     sock.send('server: Enter an existing file!'.encode('utf-8'))
                     continue
+                
+                # passed validation.
                 with open(file, 'r+') as f:
                     
                     file_data = f.readlines()
-                    print("CODE")
-                    print(file_data)
                     code_len = len(file_data)
-                    data = f'server: To edit, enter <line, starts at 0!> <replacement>'.encode('utf-8')
+                    data = f'server: To edit, enter <line> <replacement>'.encode('utf-8')
                     sock.send(data)
                     
                     # editing loop.
                     while True:
                         command = sock.recv(BUFSIZE).decode('utf-8')
                         active_dict.update({sock: time.time()})
+                        
+                        # command handling.
                         if command == '/finish editing!': break
                         if not re.search(r'^\d+\s+.+$', command):
                             sock.send(f'server: enter a valid command in the specified format.'.encode('utf-8'))
                             continue
+                         
+                        # editing process
                         line_num = int(re.findall(r'^\d+', command)[0]) - 1
                         valid_line = 1 <= line_num + 1 <= code_len
                         if not valid_line: 
                             sock.send(f'server: enter a valid command in the specified format.'.encode('utf-8'))
                             continue
+                              
+                        # new line
                         replacement = re.sub(str(line_num+1), '', command).strip() +'\n'
                         if 'tab' in replacement: replacement = ' '*4 + replacement.replace('tab', '').strip()
+                              
+                        # EDIT PART
                         file_data[line_num] = replacement
                         f.seek(0, 0)
                         f.writelines(file_data)
+                    
+            # /create
             else: 
                 file = re.sub('/create', '', file).strip()
                 FILES.append(file)
@@ -455,6 +524,8 @@ def py_code(sock, active_dict):
                     while True:
                         code = sock.recv(BUFSIZE).decode('utf-8')
                         active_dict.update({sock: time.time()})
+                         
+                        # code handling.
                         if code == '/finish coding!': break
                         if 'tab' in code: code = ' '*4 + code.replace('tab', '').strip()
                         f.write(code + '\n')
@@ -470,8 +541,8 @@ def py_code(sock, active_dict):
 def service(WINDOW, table) -> None:
     
     '''
-    main function.
-    Its the key to the server communication with other nodes -> can handle n > 2 nodes.
+    :Gets -> WINDOW, table -> Window is the main window & table is the DATABASE table
+    :The key to the server communication with other nodes -> can handle n > 2 nodes.
     RETURNS: Nothing.
     '''
 
@@ -538,10 +609,8 @@ def service(WINDOW, table) -> None:
               
             else:
                 try:
-                    # Assuming the client didnt close the connection 
                     connection_closed = False
                     peer_name = sock.getpeername()
-                    
                     data = sock.recv(BUFSIZE)
                     data = data.decode('utf-8')
                     data = data.strip()
@@ -573,6 +642,7 @@ def service(WINDOW, table) -> None:
                             data = f'server: Enter /create <file_name> to create, /run <file_name> to run.\nCurrent files to run: {FILES}'.encode('utf-8')
                             sock.send(data)
                             SENT = True
+                              
                             # Allows the client to write python code.
                             pycode_t = Thread(target=py_code, daemon=True, args=(sock, active_dict))
                             pycode_t.start()
@@ -580,7 +650,7 @@ def service(WINDOW, table) -> None:
                         elif data[1:] == 'TERMINATE':
                             
                             # send all of the clients that SOCK wants to close the server in the same time.
-                            if clients:
+                            if clients >= 2:
                                 notify_thread = Thread(target=notify_all, args=(input_list, sock, server_socket))
                                 notify_thread.start()
                             
