@@ -121,12 +121,14 @@ def init_gui() -> None:
     # Create the second frame
     utils_frame = tk.Frame(WINDOW, bg=colors["background"])
     utils_frame.grid(column=0, row=2, sticky='nsew')
-    utils_frame.grid_columnconfigure((0, 1), weight=1)
+    utils_frame.grid_columnconfigure((0,), weight=1)
     utils_frame.grid_rowconfigure((0,), weight=1)
 
     # --- UTILS ---     
     def clear():
+        chat_box.configure(state=NORMAL)
         chat_box.delete(1.0, END)
+        chat_box.configure(state=DISABLED)
 
     clear_button = tk.Button(
         utils_frame,
@@ -134,15 +136,7 @@ def init_gui() -> None:
         command=clear,
         fg=colors['primary']
     )
-    clear_button.grid(row=0, column=0, sticky='news')
-    
-    help_button = tk.Button(
-        utils_frame,
-        text='clear screen',
-        command=clear,
-        fg=colors['primary']
-    )
-    help_button.grid(row=0, column=1, sticky='news')
+    clear_button.grid(row=0, column=0, sticky='news', padx=50, pady=10)
     
     return WINDOW, top_label, chat_frame, chat_box, entry, entry_var
 
