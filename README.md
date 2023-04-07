@@ -2,7 +2,7 @@
 
 The Client Server Application is an application that allows clients to connect to a server and exchange data over a network. This comprehensive guide serves as your gateway to the world of My Client-Server Application. Here, you'll discover the features, installation process, usage instructions, and contribution guidelines.
 
-### Table of Contents
+# Table of Contents
 
     Features
     Modes
@@ -12,7 +12,7 @@ The Client Server Application is an application that allows clients to connect t
     Contributing
     License
 
-### Features
+# Features
 My Client-Server Application is packed with numerous features that make it stand out among the crowd. Here are some of its amazing features:
 
     Clients can effortlessly connect to the server using TCP/IP protocol.
@@ -22,7 +22,7 @@ My Client-Server Application is packed with numerous features that make it stand
     The application provides a simple and intuitive command-line interface that enables the client to interact effortlessly.
     $ importtant $ A client will be kicked within 2 minutes of inactivity
     
-### Modes
+# Modes
 My Client-Server Application comes with a range of modes that enable clients to access different functionalities. Here are some of its available modes:
 
     $TIME: This mode provides clients with the current time of the server, making it easy to keep track of the server's time zone.
@@ -31,7 +31,7 @@ My Client-Server Application comes with a range of modes that enable clients to 
     $CLOSE: This mode enables the client to disconnect from the server effortlessly.
     $PYCODE: This mode is the most exciting of all! It allows clients to code inside the chat. Clients can create, run, and edit Python files, including tabs, loops, if statements, and variables.
 
-### Usage
+# Usage
 To run My Client-Server Application, follow these simple steps:
 
     Open a terminal window and navigate to the application directory.
