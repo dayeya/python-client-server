@@ -13,12 +13,11 @@ FEATURES
 
 My Client-Server Application provides the following features:
 
-    Clients can connect to the server using TCP/IP protocol
-    Clients can send and receive data in different formats (text, binary, JSON)
-    The server can handle multiple client connections concurrently
-    The server can process client requests and respond with the appropriate data
-    The server can log activity and errors to a file
-    The application provides a simple command-line interface for both the server and the client
+    Clients can connect to the server using TCP/IP protocol.
+    Clients can send and receive data with couple of modes such as - $TIME, $TERMINATE, $CLOSE, $PYCODE
+    The server can handle multiple client connections concurrently.
+    The server can process client requests and respond with the appropriate data.
+    The application provides a simple command-line interface for the client.
 
 Installation
 
