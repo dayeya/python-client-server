@@ -56,8 +56,9 @@ $PYCODE - Allows the client to program in python, the server provides interprete
 	Once you type /run <file_name>.py, the server will run the code & send the result to the client.
 	If there are errors inside the file, the server will show the Error & the line of the error.
 
-$TERMINATE - terminates the server, sends a 'CLOSE CONNECTION - CLIENT' to every client, the client then 	closes itself then the server closes the connection & terminates itself.
-	Type $TERMINATE to activate the termination process -> get the password & notify all the 			clients, every client will get (IP, PORT) has activated termination.
+$TERMINATE - terminates the server, sends a 'CLOSE CONNECTION - CLIENT' to every client, the client then 
+	closes itself then the server closes the connection & terminates itself.
+	Type $TERMINATE to activate the termination process -> get the password & notify all the clients, every client will get (IP, PORT) has activated termination.
 	If the client regrets his choice, he may send 'Stop terminating' & everyone is back to noraml.
 	The client making the termination has to send the correct password to the server for shutdown.
 
