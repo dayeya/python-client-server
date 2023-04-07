@@ -284,6 +284,7 @@ def get_addr(d):
 def catch_looking_packet(server_ip, server_port) -> None:
      
     '''
+    :Gets -> IP & PORT of the server.
     :We want to catch the 'LOOKING' packet, where the client tells the LAN that he is looking for a server.
     :When a client is opened he broadcasts the LAN that he is 'LOOKING FOR A SERVER' combined with his credentials.
     :The server then sniffs that UDP frame, checks the 'LOOKING' label then takes the ip & port of the client.
