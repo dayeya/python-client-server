@@ -67,4 +67,4 @@ Both ends save the address they got & establish a connection together.
 ![image](https://user-images.githubusercontent.com/129618322/230676549-038c2480-10f6-4a77-9b9d-51306c957cd1.png)
 
 ### Conclusion
-Thank you for choosing My Client-Server Application. We hope this guide has provided you with all the information you need to get started. If you have any questions or feedback, please don't hesitate to contact us. Happy coding!
+Thank you for choosing Client Server Application. We hope this guide has provided you with all the information you need to get started.
