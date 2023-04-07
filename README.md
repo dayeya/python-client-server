@@ -29,7 +29,7 @@ My Client-Server Application comes with a range of modes that enable clients to 
     $TERMINATE: This mode allows the client to shut down the server and all other clients connected to it. A password is needed to confirm termination.
     If the client enters "Stop terminating," the termination process will be canceled, and the client will revert to the regular mode.
     $CLOSE: This mode enables the client to disconnect from the server effortlessly.
-    $PYCODE: This mode is the most exciting of all! It allows clients to code inside the chat. Clients can create, run, and edit Python files, including tabs, loops, if statements, and variables.
+    $PYCODE: This mode is the most exciting of all! It allows clients to code inside the chat. Clients can create, run, and edit Python files, including tabs, loops, if    statements, and variables.
 
 # Usage
 To run My Client-Server Application, follow these simple steps:
