@@ -192,7 +192,7 @@ def create_db() -> None:
     
     # handle exceptions.
     except Exception as e:
-        raise e
+        print(f"An error occured, {e}")
     
     # returning the cursor.
     finally:
@@ -506,7 +506,7 @@ def py_code(sock, active_dict):
                               
                         # new line
                         replacement = re.sub(str(line_num+1), '', command).strip() +'\n'
-                        if 'tab' in replacement: replacement = ' '*4 + replacement.replace('tab', '').strip()
+                        if 'tab' in replacement: replacement = ' '*4*replacement.count('tab') + replacement.replace('tab', '').strip() + '\n'
                               
                         # EDIT PART
                         file_data[line_num] = replacement
@@ -528,7 +528,7 @@ def py_code(sock, active_dict):
                          
                         # code handling.
                         if code == '/finish coding!': break
-                        if 'tab' in code: code = ' '*4 + code.replace('tab', '').strip()
+                        if 'tab' in code: code = ' '*4*code.count('tab') + code.replace('tab', '').strip()
                         f.write(code + '\n')
         
         except ConnectionAbortedError as e:
