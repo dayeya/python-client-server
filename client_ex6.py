@@ -25,6 +25,13 @@ IP_REG = r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=\s|\Z)'
 HEADER = f'''Chat with the server!, type $ before the additional commands\n1. TIME\n2. Guess the word!\n3. TERMINATE\n4. CLOSE\nDont forget to press Enter uppon sending!'''
 
 def init_gui() -> None:
+    
+    '''
+    :Creates the GUI of the client.
+    :Gets -> nothing
+    :Returns all the widgets on the screen.
+    '''
+    
     WINDOW = tk.Tk()
     WINDOW.title("Chat Client - Daniel Sapojnikov")
     WINDOW.configure(bg='#152033')
@@ -142,6 +149,8 @@ def init_gui() -> None:
 def update_chat(chat, data) -> None:
     
     '''
+    :Gets -> The chat box widget (Text Box) & data.
+    :Returns nothing.
     updates the chat visuals.
     appends the messages the client sends into the chat using - INSERT.
     '''
@@ -161,9 +170,11 @@ def update_chat(chat, data) -> None:
         chat.config(state=DISABLED)
 
 def client_send(event, client_sock, entry, box) -> None:
-
-    # sends a message from the client -> fetched from the entry widget.
     
+    '''
+    :Gets -> Event, socket of the client, the widget with the data (Entry) & the chat box.
+    :sends a message from the client -> fetched from the entry widget.
+    '''
     client_msg = entry.get() # Fetch the data from the ENTRY bar.
     print(f'SENT: {client_msg}')
     
@@ -185,9 +196,15 @@ def client_send(event, client_sock, entry, box) -> None:
     
 def await_server_answer(win, client_sock, box) -> None:
     
-    # waits for a response from the server, function is threaded.
-    # we want to run the gui at the same time as we recieve input from the server.
-
+    '''
+    :Gets -> WINDOW, socket of the client, chat box, RETURNS nothing.
+    :waits for a response from the server, function is threaded.
+    :we want to run the gui at the same time as we recieve input from the server.
+    
+    $$$ IMPORTANT $$$
+    :If the client gets the CLOSE CONNECTION message Or the Kicking messages he will be kicked from the server.
+    :
+    '''
     while True:
         try:
             data = client_sock.recv(BUFSIZE).decode('utf-8')
@@ -246,6 +263,11 @@ def client_credentials() -> None:
 
 def get_addr(d):
     
+    '''
+    :Gets -> gets a line containing the I AM A SERVER label.
+    :Returns the IP, PORT of the server.
+    '''
+    
     if not d:
         return None
     
@@ -259,6 +281,11 @@ def get_addr(d):
     return (ip, port)
 
 def define_end_points() -> None:
+    
+    '''
+    :Gets nothing. Defines the connection between the client & the server.
+    :Returns the address of the server using get_addr function.
+    '''
     
     # determine the payload.
     ip, client_port = client_credentials()
@@ -288,6 +315,11 @@ def define_end_points() -> None:
     return addr
     
 def main() -> None:
+    
+    '''
+    :The main function.
+    :Gets nothing, Returns nothing.
+    '''
 
     SERVER = None
     while not SERVER:
