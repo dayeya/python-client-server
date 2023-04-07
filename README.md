@@ -14,12 +14,11 @@ Features
 My Client-Server Application is packed with numerous features that make it stand out among the crowd. Here are some of its amazing features:
 
     Clients can effortlessly connect to the server using TCP/IP protocol.
-    Clients can send and receive data in different formats like text, binary, and JSON.
+    Clients can send and receive data, enter special modes the spice up the experience!
     The server can handle multiple client connections concurrently, making it a highly scalable and efficient application.
     The server can quickly process client requests and respond with the appropriate data in real-time.
-    The application provides a simple and intuitive command-line interface that enables both the server and the client to interact effortlessly.
-    The server logs all activities and errors in a file, ensuring accountability and traceability.
-
+    The application provides a simple and intuitive command-line interface that enables the client to interact effortlessly.
+    $ importtant $ A client will be kicked within 2 minutes of inactivity
 Modes
 
 My Client-Server Application comes with a range of modes that enable clients to access different functionalities. Here are some of its available modes:
