@@ -1,0 +1,67 @@
+RFC for the commands in Cleint - Server, Daniel Sapojnikov.
+
+INTRODUCTION
+
+The application serves as a way to communicate in the LAN with the server.
+The server provides 4 commands - TIME, PYCODE, CLOSE, TERMINATE. Each command should start with '$'.
+
+$ MODULES - added requirments.txt in the repository - DOWNLOAD $
+ 
+import os
+import string
+import random
+import time
+from datetime import datetime
+import tkinter as tk
+import tkinter.ttk as ttk   
+import sqlite3 as sl
+from scapy.all import *
+from scapy.all import conf
+import subprocess, re, select
+from threading import Thread
+from socket import *
+from typing import Tuple
+
+COMMANDS:
+
+$TIME - Returns the current time of the server, keeps track of the server TIME ZONE.
+	Libraries: datetime, uses the strftime() method.
+
+$PYCODE - Allows the client to program in python, the server provides interpreter like utilities.
+	Libraries: regex, subprocess
+	$PYCODE has couple of nice commands, /create, /run, /edit.
+	To create a file type -> /create <file_name>.py
+	To edit a file type -> edit <file_name>.py
+	To run a file type -> run <file_name>.py
+	
+	$ important notes $ 
+	The $PYCODE process is under a thread which means that the server will be able to communicate
+	with nodes while being under $PYCODE.
+	$PYCODE does not support 'inputs' graphically, so the 'input()' function wont be shown.
+	
+
+	Usage:
+	
+	/CREATE
+	Once you type the /create <file_name>.py command, you can start coding.
+	you will write the code LINE by LINE, make sure not to make any errors.
+	type '/finish coding!' to finish the coding process -> to be able to use /edit & /run.
+	
+	/EDIT
+	Once you type /edit <file_name>.py, you will be asked to edit in the following way.
+	<line_num> <replacement> E.g 4 print("Hello"):
+	Enter '/finish editing!' to stop the editing process.
+	
+	/RUN
+	Once you type /run <file_name>.py, the server will run the code & send the result to the client.
+	If there are errors inside the file, the server will show the Error & the line of the error.
+
+$TERMINATE - terminates the server, sends a 'CLOSE CONNECTION - CLIENT' to every client, the client then 	closes itself then the server closes the connection & terminates itself.
+	Type $TERMINATE to activate the termination process -> get the password & notify all the 			clients, every client will get (IP, PORT) has activated termination.
+	If the client regrets his choice, he may send 'Stop terminating' & everyone is back to noraml.
+	The client making the termination has to send the correct password to the server for shutdown.
+
+$CLOSE - the client sends '$CLOSE'. The server sends
+	'CLOSE CONNECTION - CLIENT' to the client & the client closes the GUI & its connection.
+	
+
