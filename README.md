@@ -1,6 +1,6 @@
 My Client-Server Application
 
-My Client-Server Application is an application that allows clients to connect to a server and exchange data over a network. This comprehensive guide serves as your gateway to the world of My Client-Server Application. Here, you'll discover the amazing features, installation process, usage instructions, and contribution guidelines.
+My Client-Server Application is an application that allows clients to connect to a server and exchange data over a network. This comprehensive guide serves as your gateway to the world of My Client-Server Application. Here, you'll discover the features, installation process, usage instructions, and contribution guidelines.
 Table of Contents
 
     Features
