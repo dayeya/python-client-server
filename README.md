@@ -1,6 +1,6 @@
-My Client-Server Application
+Client Server Application.
 
-My Client-Server Application is a software system that allows clients to connect to a server and exchange data over a network. This README file serves as a guide to help you understand the purpose, functionality, and usage of the application.
+This Client-Server Application is a software system that allows clients to connect to a server and exchange data over a network. This README file serves as a guide to help you understand the purpose, functionality, and usage of the application.
 Table of Contents
 
     Features
@@ -9,7 +9,7 @@ Table of Contents
     Contributing
     License
 
-Features
+FEATURES
 
 My Client-Server Application provides the following features:
 
