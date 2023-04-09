@@ -17,6 +17,7 @@ from scapy.all import conf
 import subprocess, re, select
 from threading import Thread
 from socket import *
+from typing import Tuple
 
 # globals
 global SENT
@@ -39,7 +40,7 @@ SIGNET_LEN = len(SIGNET)
 FILTER_REG = r'[^\w\n|.]'
 IP_REG = r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=\s|\Z)'
      
-def init_gui():
+def init_gui() -> Tuple[tk.Tk, ttk.Treeview]:
      
     '''
     :init_gui, initializes the gui.
@@ -192,7 +193,7 @@ def create_db() -> None:
     
     # handle exceptions.
     except Exception as e:
-        print(f"An error occured, {e}")
+        raise e
     
     # returning the cursor.
     finally:
@@ -284,7 +285,6 @@ def get_addr(d):
 def catch_looking_packet(server_ip, server_port) -> None:
      
     '''
-    :Gets -> IP & PORT of the server.
     :We want to catch the 'LOOKING' packet, where the client tells the LAN that he is looking for a server.
     :When a client is opened he broadcasts the LAN that he is 'LOOKING FOR A SERVER' combined with his credentials.
     :The server then sniffs that UDP frame, checks the 'LOOKING' label then takes the ip & port of the client.
@@ -506,7 +506,7 @@ def py_code(sock, active_dict):
                               
                         # new line
                         replacement = re.sub(str(line_num+1), '', command).strip() +'\n'
-                        if 'tab' in replacement: replacement = ' '*4*replacement.count('tab') + replacement.replace('tab', '').strip() + '\n'
+                        if 'tab' in replacement: replacement = ' '*4*code.count('tab') + replacement.replace('tab', '').strip() + '\n'
                               
                         # EDIT PART
                         file_data[line_num] = replacement
@@ -655,7 +655,7 @@ def service(WINDOW, table) -> None:
                                 notify_thread = Thread(target=notify_all, args=(input_list, sock, server_socket))
                                 notify_thread.start()
                             
-                            data = f'We need your password :)'
+                            data = f'We need your password, it may be: {PASSWORD} :)'
                             data = f'server: {data}'.encode('utf-8')
                             sock.send(data)
                             SENT = True
