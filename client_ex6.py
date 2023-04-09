@@ -1,242 +1,234 @@
 
 '''
-Server, Daniel Sapojnikov.
-Have a nice day, Eran :)
+Client, Daniel Sapojnikov.
 '''
 
-import os
-import string
-import random
+# GUI MODULES
 import time
 from datetime import datetime
+from tkinter import *
 import tkinter as tk
-import tkinter.ttk as ttk   
-import sqlite3 as sl
-from scapy.all import *
-from scapy.all import conf
-import subprocess, re, select
+import tkinter.ttk as ttk
+
+# Networking MODULES
+import os
 from threading import Thread
 from socket import *
-from typing import Tuple
+import subprocess, re
 
-# globals
-global SENT
-global SERVER_SHUT_DOWN
-SERVER_SHUT_DOWN = False
-SENT = False
+# CONSTANTS.
 
-# Avoid scapy problems.
-conf.verbose = 0
-conf.sniff_promisc = 0
-
-# important variables
-PATH = os.path.dirname(os.path.realpath(__file__))
-FILE_REG = r'^/(?:create|run|edit)\s+(\w+\.py)$'
-KICKED, FILES = [], []
-INACTIVE_GAP = 120
 BUFSIZE = 1024
-SIGNET = 'I AM LOOKING FOR A SERVER'
-SIGNET_LEN = len(SIGNET)
 FILTER_REG = r'[^\w\n|.]'
 IP_REG = r'(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?=\s|\Z)'
-     
-def init_gui() -> Tuple[tk.Tk, ttk.Treeview]:
-     
+HEADER = f'''Chat with the server!, type $ before the additional commands\n1. TIME\n2. Guess the word!\n3. TERMINATE\n4. CLOSE\nDont forget to press Enter uppon sending!'''
+
+def init_gui() -> None:
+    
     '''
-    :init_gui, initializes the gui.
-    :server side -> Has a TreeView Widget.
-    :RETURNS: every widget on the WINDOW.
+    :Creates the GUI of the client.
+    :Gets -> nothing
+    :Returns all the widgets on the screen.
     '''
-     
+    
     WINDOW = tk.Tk()
-    WINDOW.title("Server / Admin - Daniel Sapojnikov")
-
+    WINDOW.title("Chat Client - Daniel Sapojnikov")
+    WINDOW.configure(bg='#152033')
+    
     # Responsive GUI
-    tk.Grid.columnconfigure(WINDOW, 0, weight=1)
-    tk.Grid.rowconfigure(WINDOW, 1, weight=1)
-
-    # Set up colors
-    bg_color = "#111111"
-    fg_color = "#FFFFFF"
-    table_color = "#222222"
-    table_heading_color = "#555555"
-
+    Grid.columnconfigure(WINDOW, tuple(range(1)), weight=1)
+    Grid.rowconfigure(WINDOW, tuple(range(4)), weight=1)
+    
+    # Colors
+    colors = {
+        "primary": "#005cff",
+        "secondary": "#01021c",
+        "background": "#152033",
+        "text": "#dedffa",
+        "placeholder": "#a0a0a0",
+        "disabled": "#d0d0d0",
+    }
+    
+    # Fonts
+    fonts = {
+        "title": ("Cascadia Code", 20, "bold"),
+        "subtitle": ("Cascadia Code", 15, "bold"),
+        "text": ("Open Sans", 12),
+        "button": ("Open Sans", 12, "bold"),
+    }
+    
+    # Window dimensions
     full_width = int(WINDOW.winfo_screenwidth()) 
     full_height = int(WINDOW.winfo_screenheight())
-
     width = int(full_width // 1.8)
     height = int(full_height // 1.8)
     WINDOW.geometry(f'{width}x{height}')
-
-    style = ttk.Style()
-    style.theme_use("alt")  # Use the "clam" theme
     
-    # Admin label & centering.
-    label = tk.Label(
+    # Top label
+    top_label = tk.Label(
+        WINDOW, 
+        text="Chat Client", 
+        font=('Open Sans ', 20, 'bold'), 
+        fg=colors["primary"],
+        bg=colors["secondary"],
+        pady=10,
+        padx=20
+    )
+    top_label.grid(column=0, row=0, columnspan=2, sticky="nsew")
+    
+    # Chat section
+    chat_frame = tk.Frame(
         WINDOW,
+        bg=colors["background"],
+        pady=10,
+        padx=20
+    )
+    chat_frame.grid(column=0, row=1, sticky="nsew")
+    
+    # Chat box
+    chat_box = tk.Text(
+        chat_frame,
+        font=fonts["text"],
+        fg=colors["text"],
+        bg=colors["secondary"],
         padx=10,
         pady=10,
-        text='ADMIN PAGE',
-        justify=tk.CENTER,
-        font=('Open Sans', 15, 'bold'),
+        state=tk.DISABLED,
+        wrap="word",
+        insertbackground=colors["text"]
     )
-    label.grid(row=0, column=0, sticky='news')
+    chat_box.pack(fill="both", expand=True)
     
-    # configure the style of the table.
-    style.configure("TableStyle.Treeview",
-                background="#333333",  # Set the background color
-                foreground="white",    # Set the text color
-                fieldbackground="#333333",  # Set the background color for the table cells
-                bordercolor="#666666", # Set the border color
-                borderwidth=1          # Set the border width
-        )
+    # Chat entry
+    entry_var = tk.StringVar()
+    entry_var.set('Type a message')
+    entry = tk.Entry(
+        chat_frame,
+        font=('Open Sans', '12'),
+        fg=colors["text"],
+        bg=colors["background"],
+        textvariable=entry_var,
+        relief='ridge',
+        insertbackground=colors["text"],
+        highlightcolor=colors["primary"],
+        highlightbackground=colors["primary"],
+        selectbackground=colors["primary"],
+        selectforeground=colors["background"],
+    )
+    entry.pack(fill="x", pady=10)
     
-    # set the color of the table when selected.
-    style.map("TableStyle.Treeview",
-          background=[("selected", "#666666")])
+    # Create the second frame
+    utils_frame = tk.Frame(WINDOW, bg=colors["background"])
+    utils_frame.grid(column=0, row=2, sticky='nsew')
+    utils_frame.grid_columnconfigure((0,), weight=1)
+    utils_frame.grid_rowconfigure((0,), weight=1)
 
-    # Create table
-    table = ttk.Treeview(
-        WINDOW, 
-        columns=('Client', 'IP', 'Port', 'Password', 'Time of connection'), 
-        show='headings', 
-        style='TableStyle.Treeview'
-    )
-    
-    # Set the table style to the configure we made above.
+    # --- UTILS ---     
+    def clear():
+        chat_box.configure(state=NORMAL)
+        chat_box.delete(1.0, END)
+        chat_box.configure(state=DISABLED)
+        
+    # Create a style object
     style = ttk.Style()
-    style.configure(
-            "TableStyle", 
-            background=table_color, 
-            foreground=fg_color, 
-            highlightthickness=0, 
-            bd=0, 
-            font=("Arial", 10), 
-            rowheight=30, 
-            headerbackground=table_heading_color, 
-            headerforeground=fg_color, 
-            headerfont=("Arial", 12)
-        )
 
-    # Headers of the table.
-    headers = ('Client', 'IP', 'Port', 'Password', 'Time of connection')
-    for head in headers:
-        table.heading(head, text=head.upper())
+    # Configure the style to use a modern theme
+    style.theme_use('clam')
 
-    # setting the columns style.
-    for column in range(1, 6):
-        table.column(f"#{column}", anchor=tk.CENTER, stretch=tk.NO)
-
-    table.grid(row=1, column=0, sticky="nsew")
+    # Configure the style for the button
+    style.configure('Modern.TButton', font=('Helvetica', 14), foreground='white', background='#4f63ab', borderwidth=0)
+    style.map('Modern.TButton', background=[('active', '#38477a'), ('active', '#38477a')])
     
-    # add scrollbar
-    scrollbar = ttk.Scrollbar(WINDOW, orient=tk.VERTICAL, command=table.yview)
-    scrollbar.grid(row=1, column=1, sticky='ns')
-    table.configure(yscrollcommand=scrollbar.set)
+    clear_button = ttk.Button(
+        utils_frame,
+        text='clear screen',
+        command=clear,
+        style='Modern.TButton'
+    )
+    clear_button.grid(row=0, column=0, sticky='news', padx=500, pady=10)
+    
+    return WINDOW, top_label, chat_frame, chat_box, entry, entry_var
 
-    # configure row and column weights
-    WINDOW.rowconfigure(1, weight=1)
-    WINDOW.columnconfigure(0, weight=1)
-    table.grid_rowconfigure(0, weight=1)
-    table.grid_columnconfigure(0, weight=1)
-
-    return WINDOW, table
-
-def generate_password() -> str:
+def update_chat(chat, data) -> None:
     
     '''
-    :Generates a random password using random + string modules.
-    :RETURNS -> a string.
+    updates the chat visuals.
+    appends the messages the client sends into the chat using - INSERT.
     '''
-    # makes it more random.
-    PASS_LEN = random.randint(5, 8)
+    if type(data) is list: # multiline.
+        for line in data:
+            display = line.strip() + '\n'
     
-    # characters.
-    lower = string.ascii_lowercase
-    upper = string.ascii_uppercase
-    symbols = string.punctuation
-    digits = string.digits
+            chat.config(state=NORMAL)
+            chat.insert(END, display)
+            chat.config(state=DISABLED)
+        return
+    else: 
+        display = data.strip() + '\n'
     
-    # combine possibilities.
-    all_matches = lower + upper + digits + symbols
-    scramble = random.sample(all_matches, PASS_LEN)
-    
-    # create the password.
-    password = "".join(scramble)
-    return password
+        chat.config(state=NORMAL)
+        chat.insert(END, display)
+        chat.config(state=DISABLED)
 
-def create_db() -> None:
-    
-    '''
-    :Creates a data base of all clients, a must addition to the admin page.
-    :RETURNS -> the cursor for later means. 
-    '''
+def client_send(event, client_sock, entry, box) -> None:
 
-    # connecting to the data base.
-    data_base_file = 'admin.db'
-    table = sl.connect(data_base_file)
-    c = table.cursor()
+    # sends a message from the client -> fetched from the entry widget.
+    
+    client_msg = entry.get() # Fetch the data from the ENTRY bar.
+    print(f'SENT: {client_msg}')
+    
+    if client_msg == '' or not client_msg:
+        entry.set('Enter valid text!')
+        return
     
     try:
-        # when the server is closed, the table is deleted.
-        c.execute("""CREATE TABLE users (
-            client_name, text 
-            ip text,
-            port text,
-            password text,
-            connection text
-            )""")
-        
-        # Finish the work by closing the cursor and the connection.
-        c.commit()
-        table.close()
+        # SEND to the server the msg.
+        client_sock.send(client_msg.encode('utf-8'))
     
-    # handle exceptions.
     except Exception as e:
-        raise e
+        print("Error occured, try again.")
     
-    # returning the cursor.
-    finally:
-        return c
+    # Modify chat visuals.
+    entry.set('')
+    currentDateAndTime = datetime.now()
+    update_chat(box, f'client: {client_msg}') 
+    
+def await_server_answer(win, client_sock, box) -> None:
+    
+    # waits for a response from the server, function is threaded.
+    # we want to run the gui at the same time as we recieve input from the server.
 
-def insert_client(c, name, addr, password) -> None:
-    
-    '''
-    :Gets: cursor, name, addrs = (IP, PORT), password
-    :inserts the client to the data base.
-    '''
+    while True:
+        try:
+            data = client_sock.recv(BUFSIZE).decode('utf-8')
+            data = data.split('\n') if '\n' in data else data
+            print("CLIENT GOT: ", data)
+            if not data: 
+                update_chat(box, 'Error Occured, please resend your message.')
+                break
+            
+            # close connection from the clients side.
+            if data == 'CLOSE CONNECTION - CLIENT' or data == 'You are a great human being! Sadly due to inactivity, you will be kicked in 0 seconds.':
+                
+                # close all the important stuff.
+                win.destroy()
+                client_sock.close()
+                print("Connection with the server has been closed.")
+                
+                # pick a clearing command, based on the OS.
+                clear_command = 'cls' if os.name == 'nt' else 'clear'
+                os.system(clear_command)
+                quit()
+                
+            else: update_chat(box, data)
+           
+        except ConnectionResetError:
+            print("An error occured, server might have been shut down.")  
+            
+        except Exception as e:
+            raise e
 
-    # insert online clients.
-    date = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
-    table = sl.connect('admin.db')
-    c = table.cursor()
-    c.execute('''INSERT INTO users VALUES(?, ?, ?, ?, ?)''', (name, addr[0], addr[1], password, date)) # inserting
-    
-    # finishing the work.
-    table.commit()
-    table.close()
- 
-def visualize_client(table) -> None:
-    
-    '''
-    :Get -> the table we want to update.
-    '''
-     
-    entry = sl.connect('admin.db')
-    c = entry.cursor()
-    c.execute('''SELECT COUNT(*) FROM users''')
-    num_users = c.fetchone()[0]
-    client_data = c.execute(f'''SELECT * FROM users WHERE rowid = {num_users}''').fetchone()
-    
-    # Finishing the work.
-    c.close()
-    entry.close()
-    table.insert('', 'end', values=tuple(client_data))
-    
-def delete_client():
-    pass
-
-def server_credentials() -> None:
+def client_credentials() -> None:
     
     '''
     RETURNS: the credentials of the server -> (IP, PORT)
@@ -247,28 +239,22 @@ def server_credentials() -> None:
     data = subprocess.check_output('ipconfig').decode('utf-8')
     data = re.sub(FILTER_REG, '', data)
 
+    # IP
     k = data.index("IPv4Address") + 1 # the index of the ip address.
     ip = re.search(IP_REG, data[k: data.index('\n', k)])
     ip = ip.group(0) if ip != None else None
     
     # PORT
     scan_socket = socket(AF_INET, SOCK_STREAM)
-    scan_socket.bind(("",0))
+    scan_socket.bind(("", 0))
     scan_socket.listen(1)
-    
+        
     port = scan_socket.getsockname()[1]
     scan_socket.close()
     
     return (ip, port)
 
 def get_addr(d):
-    
-    '''
-    # d is the line of the LABEL.
-    
-    RETURNS: A tuple -> (IP, PORT) of the client, uses string manipulation with slices.
-    # the label: I AM LOOKING FOR A SERVER is followed by an IP and a PORT.
-    '''
     
     if not d:
         return None
@@ -281,427 +267,57 @@ def get_addr(d):
     ip, port = sign[start+1: mid], int(sign[mid+1: end])
     
     return (ip, port)
- 
-def catch_looking_packet(server_ip, server_port) -> None:
-     
-    '''
-    :We want to catch the 'LOOKING' packet, where the client tells the LAN that he is looking for a server.
-    :When a client is opened he broadcasts the LAN that he is 'LOOKING FOR A SERVER' combined with his credentials.
-    :The server then sniffs that UDP frame, checks the 'LOOKING' label then takes the ip & port of the client.
-    :The server will send the clients its own credentials to the client.
-    '''
-    ip, port = server_ip, server_port
-    server_udp = socket(family=AF_INET, type=SOCK_DGRAM)
+
+def define_end_points() -> None:
     
-    # catch the data.
-    addr, looking = (), False
+    # determine the payload.
+    ip, client_port = client_credentials()
+    data = f'I AM LOOKING FOR A SERVER ({ip}, {client_port})'.encode('utf-8')
+    
+    # open udp socket for the client.
+    udp_sock = socket(family=AF_INET, type=SOCK_DGRAM)
+    udp_sock.setsockopt(SOL_SOCKET, SO_BROADCAST, 1)
+    
+    udp_sock.sendto(data, ('255.255.255.255', client_port))
+    udp_sock.close()
+    
+    # listening.
+    udp_sock = socket(family=AF_INET, type=SOCK_DGRAM)
+    udp_sock.bind(("", client_port))
+    
     while True:
+        data, addr = udp_sock.recvfrom(BUFSIZE)
+        data = data.decode('utf-8')
         
-        # using scapy to sniff the desired UDP packet.
-        capture = sniff(count=1, filter="udp and dst 255.255.255.255")
-        data_list = [data.split('\n') for packet in capture if 'I AM LOOKING FOR A SERVER' in (data:=packet.show(dump=True))]
+        if "HELLO ITS A SERVER" in data: break
         
-        # d[-2] is the last line of the packet -> which includes the SIGN.
-        # we want to take whats between the parentheses so that we will get the addr of the client.
-        address_list = [addr for d in data_list if (addr:=get_addr(d[-2])) != None]
-        for addr in address_list:
-            
-            # send the credentials.
-            data = f'HELLO ITS A SERVER ({ip}, {port})'.encode('utf-8')
-            server_udp.sendto(data, addr)
-            
-def notify_all(input_list, terminator, server):
-     
-    '''
-    :Gets => list of clients, terminator & the server socket.
-    :Imulates BROADCAST messages, when the terminator socket sends $TERMINATE, we notify the client about the case.
-    '''
-     
-    # notify other clients.
-    online_clients = [s for s in input_list if s not in {terminator, server}]
-    print(online_clients)
+    udp_sock.close()
+    addr = get_addr(data)
     
-    for sock in online_clients:
-        sock.send(f'{sock.getpeername()} activated termination.'.encode('utf-8'))
+    print(f'CLIENT GOT: {data}')
+    return addr
+    
+def main() -> None:
 
-def verify_termination(input_list, terminator, server, active_dict, PASSWORD):
+    SERVER = None
+    while not SERVER:
+        SERVER = define_end_points()
     
-    '''
-    :Gets -> list of clients, server socket, active_dict, PASSWORD
-    :Verifies the password corresponding to the client, can stop $TERMINATE process by sending Stop terminating.
-    '''
+    client_socket = socket(AF_INET, SOCK_STREAM)
+    client_socket.connect(SERVER)
+    print(f'CLIENT: {client_socket.getsockname()}')
     
-    global SERVER_SHUT_DOWN
+    # Get widgtes
+        # Server answer.
+    WINDOW, top_label, chat_frame, chat_box, entry, entry_var = init_gui()
     
-    while True: 
-        try:
-            data = terminator.recv(BUFSIZE).decode('utf-8')
-            active_dict.update({terminator: time.time()})
-            
-            if data == PASSWORD:
-                
-                # closing signature.
-                for sock in [s for s in input_list if s not in [server]]:
-                    
-                    # Tell the client that we very sorry for closing the connection. :)
-                    data = 'CLOSE CONNECTION - CLIENT'
-                    data = data.encode('utf-8')
-                    sock.send(data) 
-                    
-                    # close the connection.
-                    print(f'Connection with client: {sock.getpeername()} has been closed')
-                    input_list.remove(sock)
-                    sock.close()
-                    
-                SERVER_SHUT_DOWN = True
-
-            elif data == 'Stop terminating':
-                data = 'Stopped! you may continue.'
-                terminator.send(data.encode('utf-8'))
-                SENT = False 
-                break
-        
-            else: terminator.send('server: Incorrect password!'.encode('utf-8'))
-
-        except OSError:
-            break    
-            
-        except Exception as e:
-            break
-
-def kick(input_list, active_dict) -> None:
+    entry.bind("<Button-1>", lambda event: entry_var.set('') if entry_var.get() in {"Type a message", "Enter valid text!"} else None) # detect 'clicking'
+    entry.bind("<Return>", lambda event: client_send(event, client_socket, entry_var, chat_box)) # detect 'sending'
     
-    '''
-    :Gets -> list of clients, active_dict which is a dictionary that matches to every KEY its Last ACTIVE time.
-    
-    $$$ IMPORTANT $$$
-    :KICKS every client whos not been active for at least 2 minutes, updates the active_dict accordingly.
-    '''
-
-    while True:
-        try:
-            for client_sock, active_time in {sock: time for sock, time in active_dict.items() if sock not in KICKED}.items():
-                
-                information_time = 0
-                if time.time() - active_time >= INACTIVE_GAP:
-                    
-                    # inform the user.
-                    client_sock.setblocking(True)
-                    data = f'You are a great human being! Sadly due to inactivity, you will be kicked in {INACTIVE_GAP+4-math.ceil((time.time() - active_time))} seconds.'
-                    client_sock.send(data.encode('utf-8'))
-                    information_time = time.time()
-                
-                if information_time - active_time >= INACTIVE_GAP + 3:
-                    data = 'CLOSE CONNECTION - CLIENT'
-                    print("SENT KICK!")
-                    client_sock.send(data.encode('utf-8'))
-                    
-                    # KICK
-                    input_list.remove(client_sock)
-                    KICKED.append(client_sock)
-                    client_sock.close()
-            time.sleep(1)
-                    
-        # exceptions
-        except ConnectionResetError:  
-            print(f'Connection with {client_sock} has been closed')
-            client_sock.close()
-        except OSError:
-            del active_dict[client_sock]
-            continue
-        except Exception as e:
-            print(e)
-            
-def py_code(sock, active_dict):
-
-    '''
-    :The function behind the pycode mode, gets a sock & the active dict.
-    :$pycode, has 6 sub-modes (/finish pycode, /finish coding!, /finish editing!, /create, /edit, /run).
-    :the client can create .py files, edit them and finally run them.
-    :TO create -> /create <file_name>.py E.g /create test.py
-    :To edit -> /edit <file_name>.py as the above -> <line_number> <replacement> E.g 5 print("Hello")
-    :To run -> /run <file_name>.py E.g /run test.py
-    :To finish any process (/finish coding!, /finish editing!) you make write it and send it, the process will be finished.
-    
-    $$$ important comments $$$
-    :DOES NOT SUPPORT INPUTS.
-    :DOES SUPPORT LOOPS, VARIABLES, IF ELSE STATEMENTS, SPECIAL FUNCTIONS SUCH AS eval, print etc.
-    :DOES SUPPORT IMPORT (has to be installed).
-    
-    :An error will be displayed once a client will /run a file, the client will then be able to /edit the file!
-    :ALL OF THE CLIENTS CAN RUN & EDIT all of the files under the same SERVER session.
-    :once a server is closed, all of the files are gone.
-    '''
-
-    global SENT
-
-    while True:
-        try:
-            # recv file name in the format /create <file_name>.py & redefine important instances.
-            sock.setblocking(True)
-            file = sock.recv(BUFSIZE).decode('utf-8')
-            active_dict.update({sock: time.time()})
-            
-            # SUB-MODES
-            if not re.search(FILE_REG, file): # check valid commands with regex.
-                sock.send('Enter a valid file name, or command.'.encode('utf-8'))
-                continue
-               
-            if file == '/finish pycode':
-                SENT = False 
-                break
-               
-            if '/run' in file:
-                file = re.sub('/run', '', file).strip()
-                if file not in FILES:
-                    sock.send('server: Enter an existing file!'.encode('utf-8'))
-                    continue
-                else: 
-                    try:
-                        # all of the files are stored in the same dir as the SERVER file.
-                        os.chdir(PATH)
-                        output = subprocess.check_output(f'python {file}', stderr=subprocess.STDOUT)
-                        sock.send(output)
-                         
-                    # Get file error.     
-                    except subprocess.CalledProcessError as e:
-                        error_output = e.output.decode('utf-8').strip()
-                        sock.send(f'{file} as an Error: {error_output}'.encode('utf-8'))
-                    
-                    finally: continue
-            
-            elif '/edit' in file:
-                file = re.sub('/edit', '', file).strip()
-               
-                # validate file.
-                if file not in FILES:
-                    sock.send('server: Enter an existing file!'.encode('utf-8'))
-                    continue
-                
-                # passed validation.
-                with open(file, 'r+') as f:
-                    
-                    file_data = f.readlines()
-                    code_len = len(file_data)
-                    data = f'server: To edit, enter <line> <replacement>'.encode('utf-8')
-                    sock.send(data)
-                    
-                    # editing loop.
-                    while True:
-                        command = sock.recv(BUFSIZE).decode('utf-8')
-                        active_dict.update({sock: time.time()})
-                        
-                        # command handling.
-                        if command == '/finish editing!': break
-                        if not re.search(r'^\d+\s+.+$', command):
-                            sock.send(f'server: enter a valid command in the specified format.'.encode('utf-8'))
-                            continue
-                         
-                        # editing process
-                        line_num = int(re.findall(r'^\d+', command)[0]) - 1
-                        valid_line = 1 <= line_num + 1 <= code_len
-                        if not valid_line: 
-                            sock.send(f'server: enter a valid command in the specified format.'.encode('utf-8'))
-                            continue
-                              
-                        # new line
-                        replacement = re.sub(str(line_num+1), '', command).strip() +'\n'
-                        if 'tab' in replacement: replacement = ' '*4*code.count('tab') + replacement.replace('tab', '').strip() + '\n'
-                              
-                        # EDIT PART
-                        file_data[line_num] = replacement
-                        f.seek(0, 0)
-                        f.writelines(file_data)
-                    
-            # /create
-            else: 
-                file = re.sub('/create', '', file).strip()
-                FILES.append(file)
-                with open(file, 'w') as f:
-                    data = f'server: {file} was created!, you may start coding.'.encode('utf-8')
-                    sock.send(data)
-                    
-                    # The client is now coding.
-                    while True:
-                        code = sock.recv(BUFSIZE).decode('utf-8')
-                        active_dict.update({sock: time.time()})
-                         
-                        # code handling.
-                        if code == '/finish coding!': break
-                        if 'tab' in code: code = ' '*4*code.count('tab') + code.replace('tab', '').strip()
-                        f.write(code + '\n')
-        
-        except ConnectionAbortedError as e:
-            print('The client was closed / kicked')
-            break
-               
-        except Exception as e:
-            print('The client was closed / kicked')
-            break
-        
-def service(WINDOW, table) -> None:
-    
-    '''
-    :Gets -> WINDOW, table -> Window is the main window & table is the DATABASE table
-    :The key to the server communication with other nodes -> can handle n > 2 nodes.
-    RETURNS: Nothing.
-    '''
-
-    global SENT
-    global SERVER_SHUT_DOWN
-
-    NODES = 2
-    BUFSIZE = 1024
-    ADDR = server_credentials()
-
-    server_socket = socket(AF_INET, SOCK_STREAM)
-    server_socket.setblocking(False)
-    server_socket.bind(ADDR)
-    server_socket.listen(NODES)
-    
-    # creating the data base.
-    cursor = create_db()
-    active_dict = {}
-    
-    # lists for service.
-    input_list = [server_socket]
-    output_list = []
-    
-    # Catch connections.
-    print(f"server <{ADDR}> is running.")
-    Thread(target=catch_looking_packet, daemon=True, args=(ADDR[0], ADDR[1])).start()
-    Thread(target=kick, daemon=True, args=(input_list, active_dict)).start()
-    while input_list:
-        
-        # Helper to notify all clients.
-        clients = len(input_list)
-        
-        if SERVER_SHUT_DOWN:
-            print('Server was shut down.')
-            WINDOW.destroy()
-            server_socket.close()
-
-            # pick a clearing command, based on the OS.
-            clear_command = 'cls' if os.name == 'nt' else 'clear'
-            os.system(clear_command)
-                        
-            # exit the service.
-            return
-        
-        readables, writeables, exceptions = select.select(input_list, output_list, [], 1)
-        for sock in readables: # SOCK is the socket we want to read from.
-            
-            if sock is server_socket:
-                
-                PASSWORD = generate_password()
-                # accept current client.
-                client_sock, address = sock.accept()
-                ip, port = address
-                
-                # appending to the data base.
-                insert_client(cursor, '', address, PASSWORD)
-                visualize_client(table)
-                
-                # print the clients important data & managing the client, each session has its own password.
-                print(f"Session with: {address}, PASSWORD: {PASSWORD}")
-                input_list.append(client_sock)
-                active_dict.update({client_sock: time.time()})
-                SENT = False
-              
-            else:
-                try:
-                    connection_closed = False
-                    peer_name = sock.getpeername()
-                    data = sock.recv(BUFSIZE)
-                    data = data.decode('utf-8')
-                    data = data.strip()
-                    
-                    # COMMANDS
-                    print(f"Server got: {data} from: {peer_name}")
-                    active_dict.update({sock: time.time()})
-                    if data[0] == '$':
-                    
-                        if data[1:] == 'TIME':
-                            currentDateAndTime = datetime.now()
-                            data = f'The current time is {currentDateAndTime.strftime("%H:%M:%S")}'
-                        
-                        elif data[1:] == 'CLOSE':
-                            
-                            # update the client side -> to close the windows & and the connection.
-                            data = 'CLOSE CONNECTION - CLIENT'
-                            sock.send(data.encode('utf-8')) 
-                            
-                            # close the connection.
-                            print(f'Connection with client: {peer_name} has been closed')
-                            input_list.remove(sock)
-                            sock.close()
-                            sent = True
-                            
-                        elif data[1:] == 'pycode':
-                            
-                            # send the information.
-                            data = f'server: Enter /create <file_name> to create, /run <file_name> to run.\nCurrent files to run: {FILES}'.encode('utf-8')
-                            sock.send(data)
-                            SENT = True
-                              
-                            # Allows the client to write python code.
-                            pycode_t = Thread(target=py_code, daemon=True, args=(sock, active_dict))
-                            pycode_t.start()
-                                                    
-                        elif data[1:] == 'TERMINATE':
-                            
-                            # send all of the clients that SOCK wants to close the server in the same time.
-                            if clients >= 2:
-                                notify_thread = Thread(target=notify_all, args=(input_list, sock, server_socket))
-                                notify_thread.start()
-                            
-                            data = f'We need your password, it may be: {PASSWORD} :)'
-                            data = f'server: {data}'.encode('utf-8')
-                            sock.send(data)
-                            SENT = True
-                            # The server
-                            sock.setblocking(True)
-                            termination_thread = Thread(target=verify_termination, daemon=True, args=(input_list, sock, server_socket, active_dict, PASSWORD))
-                            termination_thread.start()                                        
-                                               
-                    if not SENT:
-                        data = f'server: {data}'.encode('utf-8')
-                        sock.send(data) 
-                    
-                except ConnectionResetError:
-                    print(f"Connection with client: {peer_name} has been closed.")
-                    input_list.remove(sock)
-                    sock.close()
-                
-                except OSError:
-                    print(f'OSError, {sock} was closed.')
-                    continue
-                
-                except Exception as e:
-                    print(f'{e} {sock} was closed.')
-                    continue
-            
-        for sock in exceptions:
-            
-            # clients credentials
-            peer_name = sock.getpeername()
-            print(f"Handling exceptions for: {peer_name}")
-            
-            # Removing 
-            input_list.remove(sock)
-            if sock in output_list: output_list.remove(sock)
-            
-            print(f'Connection with client: {peer_name} has been closed')
-            sock.close()
-             
-if __name__ == '__main__':
-    
-    # objects / Widgets
-    WINDOW, table = init_gui()
-    
-    # run server.    
-    run_server_thread = Thread(target=service, daemon=True, args=(WINDOW, table))
-    run_server_thread.start()
-    
-    # render window.
+    # Server answer.
+    Thread(target=await_server_answer, daemon=True, args=(WINDOW, client_socket, chat_box)).start()
     WINDOW.mainloop()
+    
+ 
+if __name__ == '__main__':
+    main()
