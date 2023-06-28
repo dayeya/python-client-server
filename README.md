@@ -41,16 +41,16 @@ To run My Client-Server Application, follow these simple steps:
     Start a client by running python client.py.
     Follow the on-screen instructions to connect to the server and send/receive data.
 
-# $TIME:
+## $TIME:
 To enter the $TIME mode, the client should send $TIME. The server will respond with the current time of the server.
 
-# $TERMINATE:
+## $TERMINATE:
 To enter the $TERMINATE mode, the client should send $TERMINATE. The server will respond with a password that the client needs to provide to confirm the termination. If the client sends "Stop terminating," the termination process will be canceled. If the client provides the correct password, the server will shut down itself and all other clients.
 
-# $CLOSE:
+## $CLOSE:
 To enter the $CLOSE mode, the client should send $CLOSE. The server will disconnect the client from the server.
 
-# $PYCODE:
+## $PYCODE:
 To enter the $PYCODE mode, the client should send $PYCODE. The server will respond with instructions on how to create, run, and edit Python files. The available commands are:
     
     $ import note -> if the client want to use tabs to indent things inside IFs & Loops. The client has to write 'tab' before the line of code. E.g tab print("Hi")
